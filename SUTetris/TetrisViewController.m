@@ -52,6 +52,7 @@
 
 @property (strong, nonatomic) UIView *squareRoomView;
 @property (strong, nonatomic) UIView *roomBgView;
+@property (strong, nonatomic) UIView *topCoverView; // 挡住组合中未进入区域的部分
 @property (strong, nonatomic) SquareGroup *group;
 
 @property (weak, nonatomic) IBOutlet UILabel *scoreLabel;
@@ -102,6 +103,7 @@
     [self.squareRoomView addSubview:self.group];
     [self.tipBoardView addSubview:self.group.tipBoard];
     [self.view bringSubviewToFront:self.squareRoomView];
+    [self.view addSubview:self.topCoverView];
 }
 
 /// 进入后台时暂停游戏
@@ -491,9 +493,11 @@
     // 窗口动画
     [UIView animateWithDuration:0.06 animations:^{
         self.squareRoomView.y += 6;
+        self.roomBgView.y += 6;
     } completion:^(BOOL finished) {
         [UIView animateWithDuration:0.05 animations:^{
             self.squareRoomView.y -= 6;
+            self.roomBgView.y -= 6;
         }];
     }];
 }
@@ -820,6 +824,19 @@
     return _roomBgView;
 }
 
+- (UIView *)topCoverView {
+    if (!_topCoverView) {
+        _topCoverView = [[UIView alloc] initWithFrame:CGRectMake(_roomBgView.x, 0, _roomBgView.width, 66)];
+        _topCoverView.maxY = _roomBgView.y + 5;
+        _topCoverView.backgroundColor = self.view.backgroundColor;
+        
+        UIView *line = [[UIView alloc] initWithFrame:CGRectMake(0, _topCoverView.height - 5, _topCoverView.width, 5)];
+        line.backgroundColor = _roomBgView.backgroundColor;
+        [_topCoverView addSubview:line];
+    }
+    return _topCoverView;
+}
+
 - (SquareGroup *)group {
     if (!_group) {
         _group = [[SquareGroup alloc] init];
@@ -1010,7 +1027,7 @@
     return _tipView;
 }
 
-/// test
+/// 颜色
 - (NSArray<UIColor *> *)colorArray {
     if (!_colorArray) {
         _colorArray = @[
@@ -1024,8 +1041,9 @@
                         ];
     }
     return _colorArray;
-}///
+}
 
+/// 提示类型
 - (NSArray *)tipTypes {
     if (!_tipTypes) {
         _tipTypes = @[
@@ -1041,50 +1059,51 @@
     return _tipTypes;
 }
 
+/// 组合类型
 - (NSArray *)types {
     if (!_types) {
         _types = @[
                    @[
                        @[@1, @4, @5, @8],   // Z
                        @[@0, @1, @5, @6],
-                       ],
+                    ],
                    
                    @[
                        @[@1, @5, @6, @10],  // 反Z
                        @[@1, @2, @4, @5],
-                       ],
+                    ],
                    
                    @[
                        @[@1, @2, @6, @10],
                        @[@6, @8, @9, @10],
                        @[@0, @4, @8, @9],   // L
                        @[@0, @1, @2, @4],
-                       ],
+                    ],
                    
                    @[
                        @[@0, @1, @4, @8],
                        @[@0, @1, @2, @6],
                        @[@2, @6, @9, @10],  // 反L
                        @[@4, @8, @9, @10],
-                       ],
+                    ],
                    
                    @[
                        @[@1, @4, @5, @9],
                        @[@1, @4, @5, @6],   // 凸
                        @[@1, @5, @6, @9],
                        @[@4, @5, @6, @9],
-                       ],
+                    ],
                    
                    @[
                        @[@0, @1, @4, @5],    // 田
-                       ],
+                    ],
                    
                    @[
                        @[@4, @5, @6, @7],   // 一
                        @[@1, @5, @9, @13],
-                       ],
+                    ],
                    
-                   ];
+                  ];
     }
     return _types;
 }
@@ -1101,6 +1120,7 @@
 
 - (instancetype)initWithFrame:(CGRect)frame {
     if (self = [super initWithFrame:frame]) {
+        
         [self addBorder];
     }
     return self;
@@ -1125,6 +1145,7 @@
 
 - (void)setSelected:(BOOL)selected {
     [super setSelected:selected];
+    
     if (selected) {
         self.backgroundColor = self.color;
         self.alpha = 1;
