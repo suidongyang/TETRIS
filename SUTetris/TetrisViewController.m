@@ -109,7 +109,7 @@
     [self.tipBoardView addSubview:self.group.tipBoard];
     self.group.tipBoard.center = CGPointMake(0.5 * self.tipBoardView.width, 0.5 * self.tipBoardView.height);
     
-    self.view.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"bg"]];
+    self.view.backgroundColor = [UIColor whiteColor]; //[UIColor colorWithPatternImage:[UIImage imageNamed:@"bg"]];
     self.tipBoardView.layer.borderWidth = 5.0;
     self.tipBoardView.layer.borderColor = self.roomBgView.backgroundColor.CGColor;
     self.tipBoardView.backgroundColor = COLOR(222, 238, 254);
@@ -430,6 +430,7 @@
         }else {
             for (; i > startIndex - kColumnCount; i--) {
                 BasicSquare *square = weakSelf.squareRoomView.subviews[i];
+                square.color = self.squareRoomView.backgroundColor;
                 square.selected = YES;
             }
             startIndex = i;
@@ -1006,6 +1007,7 @@
         for (int i = 0; i < 8; i++) {
             
             BasicSquare *squareMask = [[BasicSquare alloc] initWithFrame: CGRectMake(i % 4 * kSquareWH, i / 4 * kSquareWH, kSquareWH, kSquareWH)];
+            squareMask.selected = NO;
             [_tipView addSubview:squareMask];
         }
     }
