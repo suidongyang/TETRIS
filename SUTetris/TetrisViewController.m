@@ -8,6 +8,8 @@
 
 /** TODO
  
+ 拿到相关约束 屏幕适配调节
+ 
  音效 切图 字体
  sketch
  按照与屏幕的宽高比设置约束，横竖屏适配
@@ -33,7 +35,7 @@
 
 #define kScreenWidth [UIScreen mainScreen].bounds.size.width
 #define kScreenHeight [UIScreen mainScreen].bounds.size.height
-#define kSquareWH 17  // (kScreenWidth / 20)
+#define kSquareWH ((int)kScreenWidth/22) // 方便后面计算索引值，必须是整数
 
 #define kRowCount 20
 #define kColumnCount 11
@@ -42,7 +44,6 @@
 {
     CGPoint _startPoint;        // 新组合origin
     CGFloat _edgeRotateOffset;  // 旋转溢出补偿
-    int _bestScore;             // 最高分
     int _levelUpCounter;        // 计满20行升级
     BOOL _disableButtonActions; // 按钮禁用1
     BOOL _disablePauseButton;   // 刷新动画期间使暂停按钮无效
@@ -52,9 +53,10 @@
 
 @property (strong, nonatomic) UIView *squareRoomView;
 @property (strong, nonatomic) UIView *roomBgView;
-@property (strong, nonatomic) UIView *topCoverView; // 挡住组合中未进入区域的部分
 @property (strong, nonatomic) SquareGroup *group;
+@property (weak, nonatomic) IBOutlet UIView *infoBoard;
 
+@property (weak, nonatomic) IBOutlet UILabel *levelLabel;
 @property (weak, nonatomic) IBOutlet UILabel *scoreLabel;
 @property (weak, nonatomic) IBOutlet UITextField *scoreField;
 @property (weak, nonatomic) IBOutlet UILabel *lineCountLabel;
@@ -62,6 +64,7 @@
 @property (weak, nonatomic) IBOutlet UITextField *levelField;
 @property (weak, nonatomic) IBOutlet UIView *tipBoardView;
 @property (weak, nonatomic) IBOutlet UIButton *pauseButton;
+@property (weak, nonatomic) IBOutlet UIButton *soundButton;
 
 @property (strong, nonatomic) NSTimer *dropDownTimer;       // 下落计时 1
 @property (strong, nonatomic) NSTimer *keepMoveTimer;       // 按住按钮持续移动 0
@@ -72,6 +75,10 @@
 @property (assign, nonatomic) int startupLines;             // 起始行数
 @property (assign, nonatomic) int speedLevel;               // 速度级别
 @property (assign, nonatomic) BOOL isSettingMode;           // 1-设置 0-移动
+
+@property (weak, nonatomic) IBOutlet NSLayoutConstraint *infoBoardLeft;
+@property (weak, nonatomic) IBOutlet NSLayoutConstraint *infoBoardHeight;
+
 
 @end
 
@@ -90,19 +97,38 @@
 
 - (void)initConfigs {
     _startPoint = CGPointMake(kSquareWH * 4, 0);
-    _bestScore = [self getBestScore];
     self.speedLevel = 1;
     self.score = 0;
     self.isSettingMode = YES;
 }
 
 - (void)setupUI {
-    [self.view addSubview:self.squareRoomView];
+    
     [self.view addSubview:self.roomBgView];
     [self.squareRoomView addSubview:self.group];
     [self.tipBoardView addSubview:self.group.tipBoard];
-    [self.view bringSubviewToFront:self.squareRoomView];
-    [self.view addSubview:self.topCoverView];
+    self.group.tipBoard.center = CGPointMake(0.5 * self.tipBoardView.width, 0.5 * self.tipBoardView.height);
+    
+    self.view.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"bg"]];
+    self.tipBoardView.layer.borderWidth = 5.0;
+    self.tipBoardView.layer.borderColor = self.roomBgView.backgroundColor.CGColor;
+    self.tipBoardView.backgroundColor = COLOR(222, 238, 254);
+    
+    self.levelLabel.font = [UIFont fontWithName:@"SFPortMcKenzieOutline" size:30];
+    self.scoreField.font = self.lineCountField.font = self.levelField.font = self.pauseButton.titleLabel.font = self.soundButton.titleLabel.font = self.scoreLabel.font = self.lineCountLabel.font = self.levelLabel.font;
+    
+    
+    
+    [self constraintSubviews];
+    
+}
+
+/// 配置约束
+- (void)constraintSubviews {
+    
+    self.roomBgView.x = (kScreenWidth - self.roomBgView.width - 5 - self.infoBoard.width) / 2;
+    self.infoBoardLeft.constant = self.roomBgView.maxX + 5;
+    self.infoBoardHeight.constant = self.roomBgView.height;
 }
 
 /// 进入后台时暂停游戏
@@ -342,8 +368,7 @@
     NSLog(@"---- Game Over ----");
     
     self.group.hidden = YES;
-    // 记录最高分
-    [self saveScore:self.score];
+
     // 清空当前得分行数
     self.clearedLines = 0;
     self.score = 0;
@@ -491,11 +516,9 @@
     
     // 窗口动画
     [UIView animateWithDuration:0.06 animations:^{
-        self.squareRoomView.y += 6;
         self.roomBgView.y += 6;
     } completion:^(BOOL finished) {
         [UIView animateWithDuration:0.05 animations:^{
-            self.squareRoomView.y -= 6;
             self.roomBgView.y -= 6;
         }];
     }];
@@ -730,35 +753,14 @@
     }
 }
 
-/// 存取最高分
-- (void)saveScore:(int)score {
-    if (score > _bestScore) {
-        _bestScore = score;
-        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"bestScore"];
-        [[NSUserDefaults standardUserDefaults] setObject:@(score) forKey:@"bestScore"];
-    }
-}
-
-- (int)getBestScore {
-    if ([[NSUserDefaults standardUserDefaults]objectForKey:@"bestScore"]) {
-        return [[[NSUserDefaults standardUserDefaults]objectForKey:@"bestScore"] intValue];
-    }
-    return 0;
-}
-
 #pragma mark - setters
 
 - (void)setIsSettingMode:(BOOL)isSettingMode {
     _isSettingMode = isSettingMode;
     if (isSettingMode) {
-        self.scoreLabel.text = @"最高分";
-        self.scoreField.text = @(_bestScore).stringValue;
-        self.lineCountLabel.text = @"起始行";
         self.lineCountField.text = @(self.startupLines).stringValue;
     }else {
-        self.scoreLabel.text = @"当前得分";
         self.scoreField.text = @(self.score).stringValue;
-        self.lineCountLabel.text = @"消除行";
         self.lineCountField.text = @(self.clearedLines).stringValue;
     }
 }
@@ -789,9 +791,8 @@
     if (!_squareRoomView) {
         
         _squareRoomView = [[UIView alloc] init];
-        _squareRoomView.frame = CGRectMake(20, 40, kSquareWH * kColumnCount, kSquareWH * kRowCount);
+        _squareRoomView.frame = CGRectMake(5, 5, kSquareWH * kColumnCount, kSquareWH * kRowCount);
         _squareRoomView.backgroundColor = COLOR(191, 207, 233);
-        //        _squareRoomView.clipsToBounds = YES;
         _squareRoomView.userInteractionEnabled = NO;
         
         for (int i = 0; i < kColumnCount * kRowCount; i++) {
@@ -807,24 +808,19 @@
 
 - (UIView *)roomBgView {
     if (!_roomBgView) {
-        _roomBgView = [[UIView alloc] initWithFrame:CGRectMake(_squareRoomView.x - 5, _squareRoomView.y - 5, _squareRoomView.width + 10, _squareRoomView.height + 10)];
+        _roomBgView = [[UIView alloc] init];
+        [_roomBgView addSubview:self.squareRoomView];
+        _roomBgView.frame = CGRectMake(20, 40, _squareRoomView.width + 10, _squareRoomView.height + 10);
         _roomBgView.backgroundColor = COLOR(120, 137, 169);
+        _roomBgView.clipsToBounds = YES;
+        
+        UIView *line = [[UIView alloc] initWithFrame:CGRectMake(0, 0, _roomBgView.width, 5)];
+        line.backgroundColor = _roomBgView.backgroundColor;
+        [_roomBgView addSubview:line];
     }
     return _roomBgView;
 }
 
-- (UIView *)topCoverView {
-    if (!_topCoverView) {
-        _topCoverView = [[UIView alloc] initWithFrame:CGRectMake(_roomBgView.x, 0, _roomBgView.width, 66)];
-        _topCoverView.maxY = _roomBgView.y + 5;
-        _topCoverView.backgroundColor = self.view.backgroundColor;
-        
-        UIView *line = [[UIView alloc] initWithFrame:CGRectMake(0, _topCoverView.height - 5, _topCoverView.width, 5)];
-        line.backgroundColor = _roomBgView.backgroundColor;
-        [_topCoverView addSubview:line];
-    }
-    return _topCoverView;
-}
 
 - (SquareGroup *)group {
     if (!_group) {

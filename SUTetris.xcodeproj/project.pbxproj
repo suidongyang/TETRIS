@@ -12,6 +12,14 @@
 		904BD07C1E8E14C9008AB699 /* TetrisViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 904BD07B1E8E14C9008AB699 /* TetrisViewController.m */; };
 		904BD07E1E8E152D008AB699 /* TetrisViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 904BD07D1E8E152D008AB699 /* TetrisViewController.xib */; };
 		904BD0811E8E15CB008AB699 /* UIHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 904BD0801E8E15CB008AB699 /* UIHelper.m */; };
+		90C0A65A1E9633B800FE649E /* bg@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 90C0A6561E9633B800FE649E /* bg@2x.png */; };
+		90C0A65B1E9633B800FE649E /* bg@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 90C0A6571E9633B800FE649E /* bg@3x.png */; };
+		90C0A65D1E96390200FE649E /* SF Port McKenzie Outline.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 90C0A65C1E96390200FE649E /* SF Port McKenzie Outline.ttf */; };
+		90C0A6631E9640D800FE649E /* checked.png in Resources */ = {isa = PBXBuildFile; fileRef = 90C0A65E1E9640D800FE649E /* checked.png */; };
+		90C0A6641E9640D800FE649E /* delete.png in Resources */ = {isa = PBXBuildFile; fileRef = 90C0A65F1E9640D800FE649E /* delete.png */; };
+		90C0A6651E9640D800FE649E /* down.png in Resources */ = {isa = PBXBuildFile; fileRef = 90C0A6601E9640D800FE649E /* down.png */; };
+		90C0A6661E9640D800FE649E /* left.png in Resources */ = {isa = PBXBuildFile; fileRef = 90C0A6611E9640D800FE649E /* left.png */; };
+		90C0A6671E9640D800FE649E /* right.png in Resources */ = {isa = PBXBuildFile; fileRef = 90C0A6621E9640D800FE649E /* right.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +33,14 @@
 		904BD07D1E8E152D008AB699 /* TetrisViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = TetrisViewController.xib; sourceTree = "<group>"; };
 		904BD07F1E8E15CB008AB699 /* UIHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UIHelper.h; sourceTree = "<group>"; };
 		904BD0801E8E15CB008AB699 /* UIHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UIHelper.m; sourceTree = "<group>"; };
+		90C0A6561E9633B800FE649E /* bg@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "bg@2x.png"; sourceTree = "<group>"; };
+		90C0A6571E9633B800FE649E /* bg@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "bg@3x.png"; sourceTree = "<group>"; };
+		90C0A65C1E96390200FE649E /* SF Port McKenzie Outline.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SF Port McKenzie Outline.ttf"; sourceTree = "<group>"; };
+		90C0A65E1E9640D800FE649E /* checked.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = checked.png; sourceTree = "<group>"; };
+		90C0A65F1E9640D800FE649E /* delete.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = delete.png; sourceTree = "<group>"; };
+		90C0A6601E9640D800FE649E /* down.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = down.png; sourceTree = "<group>"; };
+		90C0A6611E9640D800FE649E /* left.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = left.png; sourceTree = "<group>"; };
+		90C0A6621E9640D800FE649E /* right.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = right.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +84,8 @@
 		904BD0631E8E1470008AB699 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				90C0A65C1E96390200FE649E /* SF Port McKenzie Outline.ttf */,
+				90C0A6531E9633B800FE649E /* pngs */,
 				904BD0661E8E1470008AB699 /* AppDelegate.h */,
 				904BD0671E8E1470008AB699 /* AppDelegate.m */,
 				904BD07F1E8E15CB008AB699 /* UIHelper.h */,
@@ -76,6 +94,20 @@
 				904BD0641E8E1470008AB699 /* main.m */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		90C0A6531E9633B800FE649E /* pngs */ = {
+			isa = PBXGroup;
+			children = (
+				90C0A65E1E9640D800FE649E /* checked.png */,
+				90C0A65F1E9640D800FE649E /* delete.png */,
+				90C0A6601E9640D800FE649E /* down.png */,
+				90C0A6611E9640D800FE649E /* left.png */,
+				90C0A6621E9640D800FE649E /* right.png */,
+				90C0A6561E9633B800FE649E /* bg@2x.png */,
+				90C0A6571E9633B800FE649E /* bg@3x.png */,
+			);
+			path = pngs;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -137,7 +169,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				90C0A6641E9640D800FE649E /* delete.png in Resources */,
+				90C0A6631E9640D800FE649E /* checked.png in Resources */,
+				90C0A6651E9640D800FE649E /* down.png in Resources */,
+				90C0A6671E9640D800FE649E /* right.png in Resources */,
+				90C0A65D1E96390200FE649E /* SF Port McKenzie Outline.ttf in Resources */,
 				904BD07E1E8E152D008AB699 /* TetrisViewController.xib in Resources */,
+				90C0A65A1E9633B800FE649E /* bg@2x.png in Resources */,
+				90C0A6661E9640D800FE649E /* left.png in Resources */,
+				90C0A65B1E9633B800FE649E /* bg@3x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -254,7 +294,7 @@
 				DEVELOPMENT_TEAM = 43LFCL9FLU;
 				INFOPLIST_FILE = SUTetris/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = LEC.SUTetris;
+				PRODUCT_BUNDLE_IDENTIFIER = LEC.SUTetris.new;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -265,7 +305,7 @@
 				DEVELOPMENT_TEAM = 43LFCL9FLU;
 				INFOPLIST_FILE = SUTetris/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = LEC.SUTetris;
+				PRODUCT_BUNDLE_IDENTIFIER = LEC.SUTetris.new;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

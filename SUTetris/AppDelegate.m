@@ -22,6 +22,16 @@
     self.window.rootViewController = [[TetrisViewController alloc] init];
     [self.window makeKeyAndVisible];
     
+//    NSArray *familyNames = [UIFont familyNames];
+//    for( NSString *familyName in familyNames )
+//    {
+//        NSArray *fontNames = [UIFont fontNamesForFamilyName:familyName];
+//        for( NSString *fontName in fontNames )
+//        {
+//            printf( "\tFont: %s \n", [fontName UTF8String] );
+//        }
+//    }
+    
     return YES;
 }
 
