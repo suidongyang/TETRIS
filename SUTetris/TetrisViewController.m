@@ -33,7 +33,7 @@
 
 #define kScreenWidth [UIScreen mainScreen].bounds.size.width
 #define kScreenHeight [UIScreen mainScreen].bounds.size.height
-#define kSquareWH 15  // (kScreenWidth / 20)
+#define kSquareWH 17  // (kScreenWidth / 20)
 
 #define kRowCount 20
 #define kColumnCount 11
@@ -62,7 +62,6 @@
 @property (weak, nonatomic) IBOutlet UITextField *levelField;
 @property (weak, nonatomic) IBOutlet UIView *tipBoardView;
 @property (weak, nonatomic) IBOutlet UIButton *pauseButton;
-@property (weak, nonatomic) IBOutlet UIButton *replayButton;
 
 @property (strong, nonatomic) NSTimer *dropDownTimer;       // 下落计时 1
 @property (strong, nonatomic) NSTimer *keepMoveTimer;       // 按住按钮持续移动 0
@@ -710,16 +709,6 @@
     
 }
 
-/// 重玩
-- (IBAction)rePlay:(UIButton *)sender {
-    if (self.isSettingMode) {
-        [self startPlay];
-    }else {
-        [self convertGroupSquareToBlack];
-        [self gameOverOperaton];
-    }
-}
-
 /// 点击其他按钮开始游戏
 - (void)startPlay {
     if (!_hadBegan) {
@@ -800,7 +789,7 @@
     if (!_squareRoomView) {
         
         _squareRoomView = [[UIView alloc] init];
-        _squareRoomView.frame = CGRectMake(20, 100, kSquareWH * kColumnCount, kSquareWH * kRowCount);
+        _squareRoomView.frame = CGRectMake(20, 40, kSquareWH * kColumnCount, kSquareWH * kRowCount);
         _squareRoomView.backgroundColor = COLOR(191, 207, 233);
         //        _squareRoomView.clipsToBounds = YES;
         _squareRoomView.userInteractionEnabled = NO;
