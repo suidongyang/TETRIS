@@ -8,9 +8,9 @@
 
 /** TODO
  
- 按照与屏幕的宽高比设置约束，横竖屏适配
- sketch
  音效 切图 字体
+ sketch
+ 按照与屏幕的宽高比设置约束，横竖屏适配
  游戏开始前的动画
  退出或暂停时，销毁keepMoveTimer
  Instruments
@@ -46,9 +46,12 @@
     int _levelUpCounter;        // 计满20行升级
     BOOL _disableButtonActions; // 按钮禁用1
     BOOL _disablePauseButton;   // 刷新动画期间使暂停按钮无效
+    // 解决首次进入游戏就进入后台再返回前台，游戏自动开始的问题
+    BOOL _hadBegan;             // 程序是否运行过
 }
 
 @property (strong, nonatomic) UIView *squareRoomView;
+@property (strong, nonatomic) UIView *roomBgView;
 @property (strong, nonatomic) SquareGroup *group;
 
 @property (weak, nonatomic) IBOutlet UILabel *scoreLabel;
@@ -63,7 +66,6 @@
 @property (strong, nonatomic) NSTimer *dropDownTimer;       // 下落计时 1
 @property (strong, nonatomic) NSTimer *keepMoveTimer;       // 按住按钮持续移动 0
 @property (strong, nonatomic) NSTimer *refreshTimer;        // 刷新动画计时 0
-@property (strong, nonatomic) NSTimer *playTimer;           // 游戏计时
 
 @property (assign, nonatomic) int score;                    // 当前得分
 @property (assign, nonatomic) int clearedLines;             // 消除行数
@@ -96,15 +98,21 @@
 
 - (void)setupUI {
     [self.view addSubview:self.squareRoomView];
+    [self.view addSubview:self.roomBgView];
     [self.squareRoomView addSubview:self.group];
     [self.tipBoardView addSubview:self.group.tipBoard];
+    [self.view bringSubviewToFront:self.squareRoomView];
 }
 
 /// 进入后台时暂停游戏
 - (void)configNotifications {
     [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:nil usingBlock:^(NSNotification * _Nonnull note) {
+        
+        if (!_hadBegan) return;
+        
         self.pauseButton.selected = NO;
         [self pause:self.pauseButton];
+        
     }];
 }
 
@@ -113,13 +121,6 @@
 - (void)destroyTimer:(NSTimer *)timer {
     [timer invalidate];
     timer = nil;
-}
-
-/// 计时模式计时
-- (void)setupPlayTimer {
-    CGFloat duration = 5 * 60.0;
-    self.playTimer = [NSTimer scheduledTimerWithTimeInterval:duration target:self selector:@selector(gameOverOperaton) userInfo:nil repeats:YES];
-    [[NSRunLoop currentRunLoop] addTimer:self.playTimer forMode:NSRunLoopCommonModes];
 }
 
 /// 下落计时
@@ -160,7 +161,7 @@
         
         [self.keepMoveTimer invalidate];
         self.keepMoveTimer = nil;
-       
+        
     }
 }
 
@@ -189,6 +190,7 @@
                 
                 BasicSquare *behindSquare = self.squareRoomView.subviews[indexOfBehindSquare];
                 
+                behindSquare.color = self.group.color;
                 behindSquare.selected = YES;
             }
             
@@ -430,7 +432,7 @@
     if ([self canMoveLeft]) {
         self.group.x -= kSquareWH;
     }
-
+    
 }
 
 - (IBAction)right:(id)sender {
@@ -579,7 +581,7 @@
     return YES;
 }
 
-/// 是否可以移动
+/// 是否可以下移
 - (BOOL)canMoveDown {
     
     for (int i = 0; i < self.group.subviews.count; i++) {
@@ -610,6 +612,7 @@
     return YES;
 }
 
+/// 是否可以左移
 - (BOOL)canMoveLeft {
     
     for (int i = 0; i < self.group.subviews.count; i++) {
@@ -639,6 +642,7 @@
     return YES;
 }
 
+/// 是否可以右移
 - (BOOL)canMoveRight {
     
     for (int i = 0; i < self.group.subviews.count; i++) {
@@ -714,6 +718,9 @@
 
 /// 点击其他按钮开始游戏
 - (void)startPlay {
+    if (!_hadBegan) {
+        _hadBegan = YES;
+    }
     self.isSettingMode = NO;
     self.group.hidden = NO;
     [self.group backToStartPoint:_startPoint];
@@ -750,17 +757,17 @@
 
 - (void)setIsSettingMode:(BOOL)isSettingMode {
     _isSettingMode = isSettingMode;
-     if (isSettingMode) {
-         self.scoreLabel.text = @"最高分";
-         self.scoreField.text = @(_bestScore).stringValue;
-         self.lineCountLabel.text = @"起始行";
-         self.lineCountField.text = @(self.startupLines).stringValue;
-     }else {
-         self.scoreLabel.text = @"当前得分";
-         self.scoreField.text = @(self.score).stringValue;
-         self.lineCountLabel.text = @"消除行";
-         self.lineCountField.text = @(self.clearedLines).stringValue;
-     }
+    if (isSettingMode) {
+        self.scoreLabel.text = @"最高分";
+        self.scoreField.text = @(_bestScore).stringValue;
+        self.lineCountLabel.text = @"起始行";
+        self.lineCountField.text = @(self.startupLines).stringValue;
+    }else {
+        self.scoreLabel.text = @"当前得分";
+        self.scoreField.text = @(self.score).stringValue;
+        self.lineCountLabel.text = @"消除行";
+        self.lineCountField.text = @(self.clearedLines).stringValue;
+    }
 }
 
 - (void)setScore:(int)score {
@@ -788,35 +795,29 @@
 - (UIView *)squareRoomView {
     if (!_squareRoomView) {
         
-        CGFloat w = kSquareWH * kColumnCount;
-        CGFloat h = kSquareWH * kRowCount;
-        CGFloat x = 0;
-        CGFloat y = 100;
-        
         _squareRoomView = [[UIView alloc] init];
-        _squareRoomView.frame = CGRectMake(x, y, w, h);
-        _squareRoomView.centerX = 0.5 * kScreenWidth;
-        _squareRoomView.x -= 50;
-        _squareRoomView.clipsToBounds = YES;
+        _squareRoomView.frame = CGRectMake(20, 100, kSquareWH * kColumnCount, kSquareWH * kRowCount);
+        _squareRoomView.backgroundColor = COLOR(191, 207, 233);
+        //        _squareRoomView.clipsToBounds = YES;
         _squareRoomView.userInteractionEnabled = NO;
-        
-        _squareRoomView.layer.borderColor = [UIColor blackColor].CGColor;
-        _squareRoomView.layer.borderWidth = 1;
         
         for (int i = 0; i < kColumnCount * kRowCount; i++) {
             
-            BasicSquare *square = [[BasicSquare alloc] initWithType:11];
-            square.frame = CGRectMake(i % kColumnCount * kSquareWH, i / kColumnCount * kSquareWH, kSquareWH, kSquareWH);
+            BasicSquare *square = [[BasicSquare alloc] initWithFrame:CGRectMake(i % kColumnCount * kSquareWH, i / kColumnCount * kSquareWH, kSquareWH, kSquareWH)];
             square.selected = NO;
             [_squareRoomView addSubview:square];
-            
-            /// test
-//            [square setTitleColor:[UIColor grayColor] forState:UIControlStateNormal];
-//            [square setTitle:[NSString stringWithFormat:@"%d", i] forState:UIControlStateNormal];
             
         }
     }
     return _squareRoomView;
+}
+
+- (UIView *)roomBgView {
+    if (!_roomBgView) {
+        _roomBgView = [[UIView alloc] initWithFrame:CGRectMake(_squareRoomView.x - 5, _squareRoomView.y - 5, _squareRoomView.width + 10, _squareRoomView.height + 10)];
+        _roomBgView.backgroundColor = COLOR(120, 137, 169);
+    }
+    return _roomBgView;
 }
 
 - (SquareGroup *)group {
@@ -827,19 +828,10 @@
 }
 
 #pragma mark - Assistant
-
 - (void)dispatchAfter:(CGFloat)time operation:(void(^)())operation {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(time * NSEC_PER_SEC)), dispatch_get_main_queue(), operation);
 }
 
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    if (self.traitCollection.forceTouchCapability == UIForceTouchCapabilityAvailable) {
-        CGPoint location = [[touches anyObject] locationInView:self.squareRoomView];
-        if (CGRectContainsPoint(self.squareRoomView.bounds, location)) {
-            
-        }
-    }
-}
 
 
 @end
@@ -854,12 +846,16 @@
 
 @property (strong, nonatomic) NSArray *types;
 @property (strong, nonatomic) NSArray *group;
+@property (assign, nonatomic) int groupIndex;
+
 @property (strong, nonatomic) NSArray *tipGroup;
 
 @property (strong, nonatomic) NSArray *tipTypes;
 @property (assign, nonatomic) int tipIndex;
 
 @property (strong, nonatomic) UIView *tipView;
+
+@property (strong, nonatomic) NSArray<UIColor *> *colorArray;
 
 @end
 
@@ -870,12 +866,10 @@
         self.frame = CGRectMake(0, 0, kSquareWH * 4, kSquareWH * 4);
         
         for (int i = 0; i < 16; i++) {
-            BasicSquare *squareMask = [[BasicSquare alloc] initWithType:22];
-            squareMask.frame = CGRectMake(i % 4 * kSquareWH, i / 4 * kSquareWH, kSquareWH, kSquareWH);
+            BasicSquare *squareMask = [[BasicSquare alloc] initWithFrame: CGRectMake(i % 4 * kSquareWH, i / 4 * kSquareWH, kSquareWH, kSquareWH)];
+            squareMask.selected = NO;
             [self addSubview:squareMask];
             
-            /// test
-//            [squareMask setTitle:[NSString stringWithFormat:@"%d", i] forState:UIControlStateNormal];
         }
     }
     return self;
@@ -891,11 +885,14 @@
     for (BasicSquare *square in self.tipView.subviews) {
         square.selected = NO;
     }
+    
     NSArray *tip = self.tipTypes[self.tipIndex];
+    UIColor *color = self.colorArray[self.tipIndex];
     
     for (int i = 0; i < tip.count; i++) {
         int index = [tip[i] intValue];
         BasicSquare *square = self.tipView.subviews[index];
+        square.color = color;
         square.selected = YES;
     }
     
@@ -921,19 +918,27 @@
 - (void)showCurrentGroup {
     
     if (self.tipGroup == nil) {
-        self.tipGroup = [[self catchAnRandomGroup] firstObject];
+        
+        NSArray *array = [self catchAnRandomGroup];
+        self.tipGroup = [array firstObject];
+        self.tipIndex = [[array lastObject] intValue];
     }
+    
     self.group = self.tipGroup.copy;
-    NSArray *randomData = [self catchAnRandomGroup];
-    self.tipGroup = [randomData firstObject];
-    self.tipIndex = [[randomData lastObject] intValue];
+    self.groupIndex = self.tipIndex;
+    self.color = self.colorArray[self.groupIndex];
     
     for (int i = 0; i <self.group.count; i++) {
+        
         int index = [self.group[i] intValue];
         BasicSquare *squareM = self.subviews[index];
+        squareM.color = self.color;
         squareM.selected = YES;
     }
     
+    NSArray *randomData = [self catchAnRandomGroup];
+    self.tipGroup = [randomData firstObject];
+    self.tipIndex = [[randomData lastObject] intValue];
 }
 
 /// 随机取出一个组合及其索引 [group, index]
@@ -977,10 +982,12 @@
     // 显示组合
     if (canRotate(nextGroup)) {
         [self clearPrevGroup];
-    
+        
         for (int i = 0; i <nextGroup.count; i++) {
             int index = [nextGroup[i] intValue];
             BasicSquare *squareM = self.subviews[index];
+            
+            squareM.color = self.color;
             squareM.selected = YES;
         }
         self.group = nextGroup;
@@ -995,14 +1002,29 @@
         _tipView.frame = CGRectMake(0, 0, 4 *kSquareWH, 2 *kSquareWH);
         
         for (int i = 0; i < 8; i++) {
-            BasicSquare *squareMask = [[BasicSquare alloc] initWithType:22];
-            squareMask.frame = CGRectMake(i % 4 * kSquareWH, i / 4 * kSquareWH, kSquareWH, kSquareWH);
+            
+            BasicSquare *squareMask = [[BasicSquare alloc] initWithFrame: CGRectMake(i % 4 * kSquareWH, i / 4 * kSquareWH, kSquareWH, kSquareWH)];
             [_tipView addSubview:squareMask];
-            [squareMask setTitle:[NSString stringWithFormat:@"%d", i] forState:UIControlStateNormal];
         }
     }
     return _tipView;
 }
+
+/// test
+- (NSArray<UIColor *> *)colorArray {
+    if (!_colorArray) {
+        _colorArray = @[
+                        [UIColor redColor],
+                        [UIColor greenColor],
+                        [UIColor blueColor],
+                        [UIColor yellowColor],
+                        [UIColor purpleColor],
+                        [UIColor orangeColor],
+                        [UIColor cyanColor]
+                        ];
+    }
+    return _colorArray;
+}///
 
 - (NSArray *)tipTypes {
     if (!_tipTypes) {
@@ -1014,7 +1036,7 @@
                       @[@1, @4, @5, @6], // 凸
                       @[@0, @1, @4, @5], // 田
                       @[@4, @5, @6, @7], // 一
-                    ];
+                      ];
     }
     return _tipTypes;
 }
@@ -1025,44 +1047,44 @@
                    @[
                        @[@1, @4, @5, @8],   // Z
                        @[@0, @1, @5, @6],
-                    ],
+                       ],
                    
                    @[
                        @[@1, @5, @6, @10],  // 反Z
                        @[@1, @2, @4, @5],
-                    ],
+                       ],
                    
                    @[
                        @[@1, @2, @6, @10],
                        @[@6, @8, @9, @10],
                        @[@0, @4, @8, @9],   // L
                        @[@0, @1, @2, @4],
-                    ],
+                       ],
                    
                    @[
                        @[@0, @1, @4, @8],
                        @[@0, @1, @2, @6],
                        @[@2, @6, @9, @10],  // 反L
                        @[@4, @8, @9, @10],
-                    ],
+                       ],
                    
                    @[
                        @[@1, @4, @5, @9],
                        @[@1, @4, @5, @6],   // 凸
                        @[@1, @5, @6, @9],
                        @[@4, @5, @6, @9],
-                    ],
+                       ],
                    
                    @[
                        @[@0, @1, @4, @5],    // 田
-                    ],
+                       ],
                    
                    @[
                        @[@4, @5, @6, @7],   // 一
                        @[@1, @5, @9, @13],
-                    ],
-                       
-                ];
+                       ],
+                   
+                   ];
     }
     return _types;
 }
@@ -1076,37 +1098,43 @@
 
 
 @implementation BasicSquare
-{
-    NSInteger _type;
-}
 
-- (instancetype)initWithType:(NSInteger)type {
-    if (self = [super init]) {
-        _type = type;
-        
-        if (type == 11) {
-            self.layer.borderWidth = 0.5;
-            self.layer.borderColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.3].CGColor;
-        }
-        // test
-        [self.titleLabel setFont:[UIFont systemFontOfSize:7]];
+- (instancetype)initWithFrame:(CGRect)frame {
+    if (self = [super initWithFrame:frame]) {
+        [self addBorder];
     }
     return self;
 }
 
-- (void)setSelected:(BOOL)selected {
-    [super setSelected:selected];
-    if (_type == 11) {
-        self.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:selected ? 0.8 : 0.3];
-    }else if (_type == 22) {
-        self.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:selected ? 0.5 : 0];
-    }
-}
-
-- (void)setEnabled:(BOOL)enabled {
-    [super setEnabled:enabled];
+- (void)addBorder {
+    
+    CAShapeLayer *layer = [CAShapeLayer layer];
+    
+    CGFloat lineWidth = 2;
+    layer.lineWidth = lineWidth;
+    layer.fillColor = [UIColor clearColor].CGColor;
+    layer.strokeColor = [UIColor blackColor].CGColor;
+    
+    UIBezierPath *path = [UIBezierPath bezierPathWithRect:CGRectMake(0, 0, self.width, self.height)];
+    
+    layer.path = path.CGPath;
+    
+    [self.layer addSublayer: layer];
     
 }
+
+- (void)setSelected:(BOOL)selected {
+    [super setSelected:selected];
+    if (selected) {
+        self.backgroundColor = self.color;
+        self.alpha = 1;
+    }
+    else {
+        self.alpha = 0;
+    }
+    
+}
+
 
 @end
 

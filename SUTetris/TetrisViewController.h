@@ -16,6 +16,8 @@
 
 @interface SquareGroup : UIView
 
+@property (strong, nonatomic) UIColor *color;
+
 /// 提示下一个组合的面板
 - (UIView *)tipBoard;
 
@@ -31,7 +33,6 @@
 
 @interface BasicSquare : UIButton
 
-/// 11-背景方块 ，22-组内方块
-- (instancetype)initWithType:(NSInteger)type;
+@property (strong, nonatomic) UIColor *color;
 
 @end
