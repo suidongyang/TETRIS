@@ -8,17 +8,10 @@
 
 /** TODO
  
- 按照与屏幕的宽高比设置约束，横竖屏适配
- sketch
- 音效 切图 字体
- 游戏开始前的动画
- 退出或暂停时，销毁keepMoveTimer
- Instruments
- 
- 使用CADisplayLink代替NSTimer
- XY计算不准确的问题！
- 
- Gameboy
+ 炸弹和单块的闪动效果
+ 炸弹旋转后变成普通类型
+ 万能方块
+ 调整特殊组合的频率
  
  */
 
@@ -37,6 +30,12 @@
 
 #define kRowCount 20
 #define kColumnCount 11
+
+typedef enum {
+    SUContinue = -1,
+    SUNO = 0,
+    SUYES = 1,
+}SUBOOL;
 
 @interface TetrisViewController ()
 {
@@ -63,7 +62,6 @@
 @property (strong, nonatomic) NSTimer *dropDownTimer;       // 下落计时 1
 @property (strong, nonatomic) NSTimer *keepMoveTimer;       // 按住按钮持续移动 0
 @property (strong, nonatomic) NSTimer *refreshTimer;        // 刷新动画计时 0
-@property (strong, nonatomic) NSTimer *playTimer;           // 游戏计时
 
 @property (assign, nonatomic) int score;                    // 当前得分
 @property (assign, nonatomic) int clearedLines;             // 消除行数
@@ -113,13 +111,6 @@
 - (void)destroyTimer:(NSTimer *)timer {
     [timer invalidate];
     timer = nil;
-}
-
-/// 计时模式计时
-- (void)setupPlayTimer {
-    CGFloat duration = 5 * 60.0;
-    self.playTimer = [NSTimer scheduledTimerWithTimeInterval:duration target:self selector:@selector(gameOverOperaton) userInfo:nil repeats:YES];
-    [[NSRunLoop currentRunLoop] addTimer:self.playTimer forMode:NSRunLoopCommonModes];
 }
 
 /// 下落计时
@@ -173,27 +164,18 @@
     [self destroyTimer:self.dropDownTimer];
     
     // 固定已下落的组合
-    for (int i = 0; i < self.group.subviews.count; i++) {
-        BasicSquare *square = self.group.subviews[i];
+    [self movable:^SUBOOL(CGRect rect, int X, int Y) {
         
-        if (square.selected) {
-            // 将square的坐标转换到背景中
-            CGRect rect2 = [self.squareRoomView convertRect:square.frame fromView:self.group];
-            
-            if (rect2.origin.y >= 0) {
-                
-                int X = rect2.origin.x / kSquareWH;
-                int Y = rect2.origin.y / kSquareWH;
-                
-                int indexOfBehindSquare = Y * kColumnCount + X;
-                
-                BasicSquare *behindSquare = self.squareRoomView.subviews[indexOfBehindSquare];
-                
-                behindSquare.selected = YES;
-            }
-            
-        }
-    }
+        if (rect.origin.y < 0) return SUContinue;
+        
+        int index = Y * kColumnCount + X;
+        BasicSquare *behindSquare = self.squareRoomView.subviews[index];
+        behindSquare.selected = YES;
+        
+        return SUContinue;
+        
+    }];
+    
 }
 
 /// 消行 改进：行数为0时返回、group延时回到起点
@@ -224,6 +206,7 @@
     // 消行
     CGFloat duration = SIMULATOR ? 0.8 : 0.55;
     [self dispatchAfter:duration operation:^{
+        
         for (int i = 0; i < linesShouldClear.count; i++) {
             
             NSArray *squareLine = linesShouldClear[i];
@@ -262,21 +245,13 @@
     // 找出刚落下的组合对应的都是第几行
     NSMutableArray *lineMaybeFull_Arr = [NSMutableArray arrayWithCapacity:4];
     
-    for (int i = 0; i < self.group.subviews.count; i++) {
-        BasicSquare *square = self.group.subviews[i];
-        
-        if (square.selected) {
-            
-            CGRect rect2 = [self.squareRoomView convertRect:square.frame fromView:self.group];
-            
-            int Y = rect2.origin.y / kSquareWH;
-            // 增加 Y>=0 的判断，防止当新组合没有完全进入视野时变黑时引发数组越界
-            if (Y >=0 && ![lineMaybeFull_Arr containsObject:@(Y)]) {
-                [lineMaybeFull_Arr addObject:@(Y)];
-            }
-            
+    [self movable:^SUBOOL(CGRect rect, int X, int Y) {
+        // 增加 Y>=0 的判断，防止当新组合没有完全进入视野时变黑时引发数组越界
+        if (Y >=0 && ![lineMaybeFull_Arr containsObject:@(Y)]) {
+            [lineMaybeFull_Arr addObject:@(Y)];
         }
-    }
+        return SUContinue;
+    }];
     
     // 拿到这些行里面所有按钮的索引
     NSMutableArray *indexArrays = [NSMutableArray arrayWithCapacity:4];
@@ -356,6 +331,9 @@
     
 }
 
+
+#pragma mark - 效果
+
 /// 刷新动画
 - (void)commitRefreshAnimation {
     
@@ -416,6 +394,45 @@
     
 }
 
+#warning BUG
+- (void)bang {
+    
+    NSMutableSet *set = [NSMutableSet set];
+    
+    for (UIButton *cub in self.group.subviews) {
+        if (cub.selected == NO) continue;
+    
+        CGRect cubRect = [self.squareRoomView convertRect:cub.frame fromView:self.group];
+        CGPoint newCenter = CGPointMake(cubRect.origin.x + cubRect.size.width * 0.5, cubRect.origin.y + cubRect.size.height * 0.5);
+    
+        for (UIView *sub in self.squareRoomView.subviews) {
+            if (![sub isKindOfClass:[UIButton class]]) continue;
+            
+            if (fabs(newCenter.x - sub.center.x) <= 15 && fabs(newCenter.y - sub.center.y) <= 15) {
+                [set addObject:sub];
+            }
+        }
+    }
+    
+    for (UIButton *b in set) {
+        b.selected = NO;
+    }
+    
+    [self destroyTimer:self.dropDownTimer];
+    [self.group backToStartPoint:_startPoint];
+    [self setupDropDownTimer];
+    
+}
+
+- (void)calcScore {
+    [self convertGroupSquareToBlack];
+    // 下落得分
+    self.score += 18;
+    // 消行
+    [self clearFullLines];
+}
+
+
 #pragma mark - 控制
 
 - (IBAction)left:(UIButton *)sender {
@@ -464,11 +481,13 @@
         }
         
     }else {
-        [self convertGroupSquareToBlack];
-        // 下落得分
-        self.score += 18;
-        // 消行
-        [self clearFullLines];
+        
+        if (self.group.isBob) {
+            [self bang]; // 炸弹效果
+        }else {
+            [self calcScore];
+        }
+    
     }
     
 }
@@ -580,89 +599,94 @@
 }
 
 /// 是否可以移动
+
 - (BOOL)canMoveDown {
     
-    for (int i = 0; i < self.group.subviews.count; i++) {
-        BasicSquare *square = self.group.subviews[i];
-        if (square.selected) {
+    return [self movable:^SUBOOL(CGRect rect, int X, int Y) {
+        
+        if (self.group.isUniqueSquare) {
             
-            // 将square的坐标转换到背景中
-            CGRect rect2 = [self.squareRoomView convertRect:square.frame fromView:self.group];
+            BOOL canMoveDown = NO;
             
-            // 只考虑显示在room范围内的，防止崩溃
-            if (rect2.origin.y >= 0) {
-                int X = rect2.origin.x / kSquareWH;
-                int Y = rect2.origin.y / kSquareWH;
+            for (UIView *sub in self.squareRoomView.subviews) {
                 
-                if (Y == kRowCount - 1) return NO;
+                if (![sub isKindOfClass:[UIButton class]]) continue;
+                if (sub.x != rect.origin.x || sub.y <= rect.origin.y) continue;
                 
-                int indexOfBelowSquare = (Y + 1) * kColumnCount + X;
-                
-                BasicSquare *belowSquare = self.squareRoomView.subviews[indexOfBelowSquare];
-                
-                if (belowSquare.isSelected) {
-                    return NO;
+                if (((UIButton *)sub).selected == NO && rect.origin.y < self.squareRoomView.height - 15) {
+                    canMoveDown = YES;
                 }
             }
+            return (SUBOOL)canMoveDown;
+            
         }
-    }
+        
+        // 只考虑显示在room范围内的，防止崩溃
+        if (rect.origin.y < 0) return SUContinue;
+        
+        if (Y == kRowCount - 1) return SUNO;
+        
+        int index = (Y + 1) * kColumnCount + X;
+        BasicSquare *belowSquare = self.squareRoomView.subviews[index];
+        if (belowSquare.isSelected && [self.group isUniqueSquare] == NO) {
+            return SUNO;
+        }
+        
+        return SUContinue;
+        
+    }];
     
-    return YES;
 }
 
 - (BOOL)canMoveLeft {
     
-    for (int i = 0; i < self.group.subviews.count; i++) {
-        BasicSquare *square = self.group.subviews[i];
-        if (square.selected) {
-            // 将square的坐标转换到背景中
-            CGRect rect2 = [self.squareRoomView convertRect:square.frame fromView:self.group];
-            int X = rect2.origin.x / kSquareWH;
-            int Y = rect2.origin.y / kSquareWH;
-            
-            if (X == 0) return NO;
-            
-            if (Y >= 0) {
-                int indexOfLeftSquare = Y * kColumnCount + X - 1;
-                
-                BasicSquare *leftSquare = self.squareRoomView.subviews[indexOfLeftSquare];
-                
-                if (leftSquare.isSelected) {
-                    return NO;
-                }
-                
-            }
-            
-        }
-    }
+    return [self movable:^SUBOOL(CGRect rect, int X, int Y) {
+        
+        if (X == 0) return SUNO;
+        
+        if (Y < 0) return SUContinue;
+        
+        int index = Y * kColumnCount + X - 1;
+        BasicSquare *leftSquare = self.squareRoomView.subviews[index];
+        if (leftSquare.isSelected) return SUNO;
+        
+        return SUContinue;
+        
+    }];
     
-    return YES;
 }
 
 - (BOOL)canMoveRight {
     
+    return [self movable:^SUBOOL(CGRect rect, int X, int Y) {
+        
+        if (X == kColumnCount - 1) return SUNO;
+        
+        if (Y < 0) return SUContinue;
+        
+        int index = Y * kColumnCount + X + 1;
+        BasicSquare *rightSquare = self.squareRoomView.subviews[index];
+        if (rightSquare.isSelected) return SUNO;
+        
+        return SUContinue;
+        
+    }];
+    
+}
+
+- (BOOL)movable:(SUBOOL(^)(CGRect rect, int X, int Y))judgeBlock {
+    
     for (int i = 0; i < self.group.subviews.count; i++) {
         BasicSquare *square = self.group.subviews[i];
         if (square.selected) {
             // 将square的坐标转换到背景中
-            CGRect rect2 = [self.squareRoomView convertRect:square.frame fromView:self.group];
+            CGRect rect = [self.squareRoomView convertRect:square.frame fromView:self.group];
+            int X = rect.origin.x / kSquareWH;
+            int Y = rect.origin.y / kSquareWH;
             
-            int X = rect2.origin.x / kSquareWH;
-            int Y = rect2.origin.y / kSquareWH;
-            
-            if (X == kColumnCount - 1) return NO;
-            
-            if (Y >= 0) {
-                int indexOfRightSquare = Y * kColumnCount + X + 1;
-                
-                BasicSquare *rightSquare = self.squareRoomView.subviews[indexOfRightSquare];
-                
-                if (rightSquare.isSelected) {
-                    return NO;
-                }
-                
-            }
-            
+            SUBOOL result = judgeBlock(rect, X, Y);
+            if (result == SUContinue) continue;
+            return result;
             
         }
     }
@@ -697,8 +721,6 @@
         _disableButtonActions = NO;
         [self setupDropDownTimer];
     }
-    
-    
     
 }
 
@@ -810,10 +832,6 @@
             square.selected = NO;
             [_squareRoomView addSubview:square];
             
-            /// test
-//            [square setTitleColor:[UIColor grayColor] forState:UIControlStateNormal];
-//            [square setTitle:[NSString stringWithFormat:@"%d", i] forState:UIControlStateNormal];
-            
         }
     }
     return _squareRoomView;
@@ -832,15 +850,6 @@
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(time * NSEC_PER_SEC)), dispatch_get_main_queue(), operation);
 }
 
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    if (self.traitCollection.forceTouchCapability == UIForceTouchCapabilityAvailable) {
-        CGPoint location = [[touches anyObject] locationInView:self.squareRoomView];
-        if (CGRectContainsPoint(self.squareRoomView.bounds, location)) {
-            
-        }
-    }
-}
-
 
 @end
 
@@ -852,10 +861,10 @@
 
 @interface SquareGroup ()
 
-@property (strong, nonatomic) NSArray *types;
 @property (strong, nonatomic) NSArray *group;
-@property (strong, nonatomic) NSArray *tipGroup;
+@property (strong, nonatomic) NSArray *types;
 
+@property (strong, nonatomic) NSArray *tipGroup;
 @property (strong, nonatomic) NSArray *tipTypes;
 @property (assign, nonatomic) int tipIndex;
 
@@ -863,26 +872,31 @@
 
 @end
 
+
 @implementation SquareGroup
 
 - (instancetype)init {
-    if (self = [super init]) {
-        self.frame = CGRectMake(0, 0, kSquareWH * 4, kSquareWH * 4);
-        
-        for (int i = 0; i < 16; i++) {
-            BasicSquare *squareMask = [[BasicSquare alloc] initWithType:22];
-            squareMask.frame = CGRectMake(i % 4 * kSquareWH, i / 4 * kSquareWH, kSquareWH, kSquareWH);
-            [self addSubview:squareMask];
-            
-            /// test
-//            [squareMask setTitle:[NSString stringWithFormat:@"%d", i] forState:UIControlStateNormal];
-        }
+    self = [super initWithFrame:CGRectMake(0, 0, kSquareWH * 4, kSquareWH * 4)];
+    if (!self) return nil;
+    for (int i = 0; i < 16; i++) {
+        BasicSquare *squareMask = [[BasicSquare alloc] initWithType:22];
+        squareMask.frame = CGRectMake(i % 4 * kSquareWH, i / 4 * kSquareWH, kSquareWH, kSquareWH);
+        [self addSubview:squareMask];
     }
     return self;
 }
 
 - (UIView *)tipBoard {
     return self.tipView;
+}
+
+// 是否是可穿透的小方块
+- (BOOL)isUniqueSquare {
+    return self.group.count == 1;
+}
+
+- (BOOL)isBob {
+    return self.group.count == 5;
 }
 
 /// 更新下一个提示
@@ -924,11 +938,12 @@
         self.tipGroup = [[self catchAnRandomGroup] firstObject];
     }
     self.group = self.tipGroup.copy;
+    
     NSArray *randomData = [self catchAnRandomGroup];
     self.tipGroup = [randomData firstObject];
     self.tipIndex = [[randomData lastObject] intValue];
     
-    for (int i = 0; i <self.group.count; i++) {
+    for (int i = 0; i < self.group.count; i++) {
         int index = [self.group[i] intValue];
         BasicSquare *squareM = self.subviews[index];
         squareM.selected = YES;
@@ -1014,6 +1029,9 @@
                       @[@1, @4, @5, @6], // 凸
                       @[@0, @1, @4, @5], // 田
                       @[@4, @5, @6, @7], // 一
+                      @[@1, @2],         // -
+                      @[@5],             // .
+                      @[@1, @3, @4, @6], // bob
                     ];
     }
     return _tipTypes;
@@ -1026,42 +1044,58 @@
                        @[@1, @4, @5, @8],   // Z
                        @[@0, @1, @5, @6],
                     ],
-                   
+
                    @[
                        @[@1, @5, @6, @10],  // 反Z
                        @[@1, @2, @4, @5],
                     ],
-                   
+
                    @[
                        @[@1, @2, @6, @10],
                        @[@6, @8, @9, @10],
                        @[@0, @4, @8, @9],   // L
                        @[@0, @1, @2, @4],
                     ],
-                   
+
                    @[
                        @[@0, @1, @4, @8],
                        @[@0, @1, @2, @6],
                        @[@2, @6, @9, @10],  // 反L
                        @[@4, @8, @9, @10],
                     ],
-                   
+
                    @[
                        @[@1, @4, @5, @9],
                        @[@1, @4, @5, @6],   // 凸
                        @[@1, @5, @6, @9],
                        @[@4, @5, @6, @9],
                     ],
-                   
+
                    @[
                        @[@0, @1, @4, @5],    // 田
                     ],
-                   
+
                    @[
                        @[@4, @5, @6, @7],   // 一
                        @[@1, @5, @9, @13],
                     ],
-                       
+
+                   @[
+                       @[@1, @2],           // -
+                       @[@2, @6],
+                       @[@5, @6],
+                       @[@1, @5],
+
+                    ],
+
+                   @[
+                       @[@5],               // .
+                    ],
+                   
+                   @[
+                       @[@2, @5, @6, @9, @10], // bob
+                    ],
+                   
                 ];
     }
     return _types;
@@ -1075,8 +1109,8 @@
 ///=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-
 
 
-@implementation BasicSquare
-{
+@implementation BasicSquare {
+    
     NSInteger _type;
 }
 
@@ -1103,10 +1137,7 @@
     }
 }
 
-- (void)setEnabled:(BOOL)enabled {
-    [super setEnabled:enabled];
-    
-}
+
 
 @end
 

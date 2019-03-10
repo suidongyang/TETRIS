@@ -25,6 +25,12 @@
 /// 旋转
 - (void)rotate:(BOOL(^)(NSArray *nextGroup))canRotate;
 
+/// 是否是可向下穿越的小方块
+- (BOOL)isUniqueSquare;
+
+/// 是否是炸弹
+- (BOOL)isBob;
+
 @end
 
 ///-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
