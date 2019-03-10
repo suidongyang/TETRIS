@@ -31,11 +31,8 @@
 #define kRowCount 20
 #define kColumnCount 11
 
-typedef enum {
-    SUContinue = -1,
-    SUNO = 0,
-    SUYES = 1,
-}SUBOOL;
+typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
+
 
 @interface TetrisViewController ()
 {
@@ -71,6 +68,7 @@ typedef enum {
 
 @end
 
+
 @implementation TetrisViewController
 
 - (void)dealloc {
@@ -98,7 +96,7 @@ typedef enum {
     [self.tipBoardView addSubview:self.group.tipBoard];
 }
 
-/// 进入后台时暂停游戏
+// 进入后台时暂停游戏
 - (void)configNotifications {
     [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:nil usingBlock:^(NSNotification * _Nonnull note) {
         self.pauseButton.selected = NO;
@@ -113,14 +111,14 @@ typedef enum {
     timer = nil;
 }
 
-/// 下落计时
+// 下落计时
 - (void)setupDropDownTimer {
     CGFloat duartion = 1.0 * pow(0.75, (self.speedLevel - 1));
     self.dropDownTimer = [NSTimer scheduledTimerWithTimeInterval:duartion target:self selector:@selector(down:) userInfo:nil repeats:YES];
     [[NSRunLoop currentRunLoop] addTimer:self.dropDownTimer forMode:NSRunLoopCommonModes];
 }
 
-/// 按住按钮持续移动的计时
+// 按住按钮持续移动的计时
 - (IBAction)setupKeepMoveTimer:(UILongPressGestureRecognizer *)longGes {
     if (self.isSettingMode) return;
     
@@ -148,16 +146,15 @@ typedef enum {
     }
     
     if (longGes.state == UIGestureRecognizerStateEnded || longGes.state == UIGestureRecognizerStateFailed || longGes.state == UIGestureRecognizerStateCancelled) {
-        
         [self.keepMoveTimer invalidate];
         self.keepMoveTimer = nil;
-       
     }
+    
 }
 
 #pragma mark - 游戏中
 
-/// 将落下的方块固定
+// 将落下的方块固定
 - (void)convertGroupSquareToBlack {
     
     // 取消下落计时
@@ -178,7 +175,7 @@ typedef enum {
     
 }
 
-/// 消行 改进：行数为0时返回、group延时回到起点
+// 消行
 - (void)clearFullLines {
     
     NSArray *linesShouldClear = [self LineArrayWaitForClear];
@@ -227,19 +224,19 @@ typedef enum {
         }
     }];
     
-    // 消行计分、提高速度级别
+    // 计分、提高速度级别
     [self calcScoreAndSpeedLevel:(int)linesShouldClear.count];
     // 消除动画完成后，判断游戏结束，group回到起始位置
     if (![self isOver]) {
         [self.group backToStartPoint:_startPoint];
         [self setupDropDownTimer];
-        
     }else {
         [self gameOverOperaton];
     }
+    
 }
 
-/// 找出需要消除的行
+// 找出需要消除的行
 - (NSArray *)LineArrayWaitForClear {
     
     // 找出刚落下的组合对应的都是第几行
@@ -292,7 +289,7 @@ typedef enum {
     return indexArrays;
 }
 
-/// 根据消除的行数计分、提高速度级别 bug
+// 根据消除的行数计分、提高速度级别 bug
 - (void)calcScoreAndSpeedLevel:(int)clearedCount {
     
     self.clearedLines += clearedCount;
@@ -309,7 +306,7 @@ typedef enum {
     
 }
 
-/// 游戏结束后的操作
+// 游戏结束后的操作
 - (void)gameOverOperaton {
     NSLog(@"---- Game Over ----");
     
@@ -334,7 +331,7 @@ typedef enum {
 
 #pragma mark - 效果
 
-/// 刷新动画
+// 刷新动画
 - (void)commitRefreshAnimation {
     
     // 禁止按钮操作
@@ -356,7 +353,7 @@ typedef enum {
             // 改进：代码执行完了，但是屏幕刷新延迟了，所以这个操作需要延时 ?
             CGFloat duration = SIMULATOR ? 0.5 : 0.2;
             [weakSelf dispatchAfter:duration operation:^{
-                _disableButtonActions = NO; ///
+                _disableButtonActions = NO; //
                 _disablePauseButton = NO;
             }];
             return;
@@ -408,7 +405,7 @@ typedef enum {
         for (UIView *sub in self.squareRoomView.subviews) {
             if (![sub isKindOfClass:[UIButton class]]) continue;
             
-            if (fabs(newCenter.x - sub.center.x) <= 15 && fabs(newCenter.y - sub.center.y) <= 15) {
+            if (fabs(newCenter.x - sub.center.x) <= kSquareWH && fabs(newCenter.y - sub.center.y) <= kSquareWH) {
                 [set addObject:sub];
             }
         }
@@ -485,7 +482,7 @@ typedef enum {
         if (self.group.isBob) {
             [self bang]; // 炸弹效果
         }else {
-            [self calcScore];
+            [self calcScore]; // 计分
         }
     
     }
@@ -537,7 +534,7 @@ typedef enum {
 
 #pragma mark - 判断
 
-/// 是否处于非游戏状态：暂停 刷新
+// 是否处于非游戏状态：暂停 刷新
 - (BOOL)isPauseState {
     // 暂停时取消暂停
     if (self.pauseButton.selected) {
@@ -545,7 +542,7 @@ typedef enum {
         [self setupDropDownTimer];
         self.pauseButton.selected = NO;
         return YES;
-        // 刷新动画时按钮无效
+    // 刷新动画时按钮无效
     }else if (_disableButtonActions) {
         return YES;
     }else {
@@ -553,7 +550,7 @@ typedef enum {
     }
 }
 
-/// 是否结束游戏
+// 是否结束游戏
 - (BOOL)isOver {
     for (int i = 0; i < kColumnCount; i++) {
         BasicSquare *square = self.squareRoomView.subviews[i];
@@ -564,7 +561,7 @@ typedef enum {
     return NO;
 }
 
-/// 是否可以旋转
+// 是否可以旋转
 - (BOOL)canRotate:(NSArray *)nextGroup {
     
     for (int i = 0; i < nextGroup.count; i++) {
@@ -598,7 +595,7 @@ typedef enum {
     return YES;
 }
 
-/// 是否可以移动
+// 是否可以移动
 
 - (BOOL)canMoveDown {
     
@@ -613,7 +610,7 @@ typedef enum {
                 if (![sub isKindOfClass:[UIButton class]]) continue;
                 if (sub.x != rect.origin.x || sub.y <= rect.origin.y) continue;
                 
-                if (((UIButton *)sub).selected == NO && rect.origin.y < self.squareRoomView.height - 15) {
+                if (((UIButton *)sub).selected == NO && rect.origin.y < self.squareRoomView.height - kSquareWH) {
                     canMoveDown = YES;
                 }
             }
@@ -679,15 +676,12 @@ typedef enum {
     for (int i = 0; i < self.group.subviews.count; i++) {
         BasicSquare *square = self.group.subviews[i];
         if (square.selected) {
-            // 将square的坐标转换到背景中
             CGRect rect = [self.squareRoomView convertRect:square.frame fromView:self.group];
             int X = rect.origin.x / kSquareWH;
             int Y = rect.origin.y / kSquareWH;
-            
             SUBOOL result = judgeBlock(rect, X, Y);
             if (result == SUContinue) continue;
             return result;
-            
         }
     }
     
@@ -696,15 +690,7 @@ typedef enum {
 
 #pragma mark - 设置
 
-/// 音效
-- (IBAction)configVoice:(UIButton *)sender {
-    if (_disableButtonActions) return;
-    sender.selected = !sender.selected;
-    
-    
-}
-
-/// 暂停
+// 暂停
 - (IBAction)pause:(UIButton *)sender {
     if (_disablePauseButton) return;
     
@@ -724,7 +710,7 @@ typedef enum {
     
 }
 
-/// 重玩
+// 重玩
 - (IBAction)rePlay:(UIButton *)sender {
     if (self.isSettingMode) {
         [self startPlay];
@@ -734,7 +720,7 @@ typedef enum {
     }
 }
 
-/// 点击其他按钮开始游戏
+// 点击其他按钮开始游戏
 - (void)startPlay {
     self.isSettingMode = NO;
     self.group.hidden = NO;
@@ -743,7 +729,7 @@ typedef enum {
     [self configRandomLines];
 }
 
-/// 设置起始行
+// 设置起始行
 - (void)configRandomLines {
     if (self.startupLines == 0) return;
     for (int i = kColumnCount * kRowCount - 1; i > kColumnCount * (kRowCount - self.startupLines); i--) {
@@ -752,7 +738,7 @@ typedef enum {
     }
 }
 
-/// 存取最高分
+// 存取最高分
 - (void)saveScore:(int)score {
     if (score > _bestScore) {
         _bestScore = score;
@@ -855,8 +841,8 @@ typedef enum {
 
 
 
-///=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-
-///=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-
+
+#pragma mark -
 
 
 @interface SquareGroup ()
@@ -895,11 +881,12 @@ typedef enum {
     return self.group.count == 1;
 }
 
+// 是否是炸弹
 - (BOOL)isBob {
     return self.group.count == 5;
 }
 
-/// 更新下一个提示
+// 更新下一个提示
 - (void)updateTipView {
     
     for (BasicSquare *square in self.tipView.subviews) {
@@ -915,7 +902,7 @@ typedef enum {
     
 }
 
-/// 回到起始位置
+// 回到起始位置
 - (void)backToStartPoint:(CGPoint)startPoint {
     self.origin = startPoint;
     [self clearPrevGroup];
@@ -924,14 +911,14 @@ typedef enum {
     [self updateTipView];
 }
 
-/// 清空上次显示
+// 清空上次显示
 - (void)clearPrevGroup {
     for (BasicSquare *square in self.subviews) {
         square.selected = NO;
     }
 }
 
-/// 显示组合
+// 显示组合
 - (void)showCurrentGroup {
     
     if (self.tipGroup == nil) {
@@ -951,7 +938,7 @@ typedef enum {
     
 }
 
-/// 随机取出一个组合及其索引 [group, index]
+// 随机取出一个组合及其索引 [group, index]
 - (NSArray *)catchAnRandomGroup {
     int bangIndex = arc4random_uniform((uint32_t)self.types.count);
     NSArray *randomBang = self.types[bangIndex];
@@ -960,7 +947,7 @@ typedef enum {
     return @[randomGroup, @(bangIndex)];
 }
 
-/// 设置初始位置
+// 设置初始位置
 - (void)initPosition {
     // 新组合出现时只显示最下面一行
     for (int i = (int)self.subviews.count - 1; i >= 0; i--) {
@@ -972,7 +959,7 @@ typedef enum {
     }
 }
 
-/// 旋转
+// 旋转
 - (void)rotate:(BOOL(^)(NSArray *nextGroup))canRotate {
     
     // 找出包含待旋转方块组和的数组
@@ -1013,7 +1000,6 @@ typedef enum {
             BasicSquare *squareMask = [[BasicSquare alloc] initWithType:22];
             squareMask.frame = CGRectMake(i % 4 * kSquareWH, i / 4 * kSquareWH, kSquareWH, kSquareWH);
             [_tipView addSubview:squareMask];
-            [squareMask setTitle:[NSString stringWithFormat:@"%d", i] forState:UIControlStateNormal];
         }
     }
     return _tipView;
@@ -1023,13 +1009,13 @@ typedef enum {
     if (!_tipTypes) {
         _tipTypes = @[
                       @[@0, @1, @5, @6], // Z
-                      @[@1, @2, @4, @5], // 反Z
+                      @[@1, @2, @4, @5], // -Z
                       @[@2, @4, @5, @6], // L
-                      @[@0, @4, @5, @6], // 反L
-                      @[@1, @4, @5, @6], // 凸
-                      @[@0, @1, @4, @5], // 田
-                      @[@4, @5, @6, @7], // 一
-                      @[@1, @2],         // -
+                      @[@0, @4, @5, @6], // -L
+                      @[@1, @4, @5, @6], // T
+                      @[@0, @1, @4, @5], // O
+                      @[@4, @5, @6, @7], // I
+                      @[@1, @2],         // i
                       @[@5],             // .
                       @[@1, @3, @4, @6], // bob
                     ];
@@ -1040,61 +1026,38 @@ typedef enum {
 - (NSArray *)types {
     if (!_types) {
         _types = @[
-                   @[
-                       @[@1, @4, @5, @8],   // Z
-                       @[@0, @1, @5, @6],
-                    ],
+                   // Z
+                   @[ @[@1, @4, @5, @8], @[@0, @1, @5, @6] ],
 
-                   @[
-                       @[@1, @5, @6, @10],  // 反Z
-                       @[@1, @2, @4, @5],
-                    ],
+                   // -Z
+                   @[ @[@1, @5, @6, @10], @[@1, @2, @4, @5] ],
 
-                   @[
-                       @[@1, @2, @6, @10],
-                       @[@6, @8, @9, @10],
-                       @[@0, @4, @8, @9],   // L
-                       @[@0, @1, @2, @4],
-                    ],
+                   // L
+                   @[ @[@1, @2, @6, @10], @[@6, @8, @9, @10],
+                      @[@0, @4, @8, @9], @[@0, @1, @2, @4] ],
 
-                   @[
-                       @[@0, @1, @4, @8],
-                       @[@0, @1, @2, @6],
-                       @[@2, @6, @9, @10],  // 反L
-                       @[@4, @8, @9, @10],
-                    ],
+                   // -L
+                   @[ @[@0, @1, @4, @8], @[@0, @1, @2, @6],
+                      @[@2, @6, @9, @10], @[@4, @8, @9, @10] ],
 
-                   @[
-                       @[@1, @4, @5, @9],
-                       @[@1, @4, @5, @6],   // 凸
-                       @[@1, @5, @6, @9],
-                       @[@4, @5, @6, @9],
-                    ],
+                   // T
+                   @[ @[@1, @4, @5, @9], @[@1, @4, @5, @6],
+                      @[@1, @5, @6, @9], @[@4, @5, @6, @9] ],
 
-                   @[
-                       @[@0, @1, @4, @5],    // 田
-                    ],
+                   // O
+                   @[ @[@0, @1, @4, @5] ],
 
-                   @[
-                       @[@4, @5, @6, @7],   // 一
-                       @[@1, @5, @9, @13],
-                    ],
+                   // I
+                   @[ @[@4, @5, @6, @7], @[@1, @5, @9, @13] ],
 
-                   @[
-                       @[@1, @2],           // -
-                       @[@2, @6],
-                       @[@5, @6],
-                       @[@1, @5],
+                   // i
+                   @[ @[@1, @2], @[@2, @6], @[@5, @6], @[@1, @5] ],
 
-                    ],
-
-                   @[
-                       @[@5],               // .
-                    ],
+                   // .
+                   @[ @[@5] ],
                    
-                   @[
-                       @[@2, @5, @6, @9, @10], // bob
-                    ],
+                   // bob
+                   @[ @[@2, @5, @6, @9, @10] ],
                    
                 ];
     }
@@ -1105,12 +1068,13 @@ typedef enum {
 @end
 
 
-///=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-
-///=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-
+
+#pragma mark -
 
 
-@implementation BasicSquare {
-    
+@implementation BasicSquare
+
+{
     NSInteger _type;
 }
 
@@ -1122,8 +1086,6 @@ typedef enum {
             self.layer.borderWidth = 0.5;
             self.layer.borderColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.3].CGColor;
         }
-        // test
-        [self.titleLabel setFont:[UIFont systemFontOfSize:7]];
     }
     return self;
 }
