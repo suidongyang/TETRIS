@@ -9,6 +9,7 @@
 /** TODO
  
  炸弹和单块的闪动效果
+ 炸弹去掉小尾巴 循环闪动
  炸弹旋转后变成普通类型
  万能方块
  调整特殊组合的频率
@@ -181,24 +182,7 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
     NSArray *linesShouldClear = [self LineArrayWaitForClear];
     
     // 消行动画
-    for (int i = 0; i < linesShouldClear.count; i++) {
-        for (NSNumber *index in linesShouldClear[i]) {
-            BasicSquare *square = self.squareRoomView.subviews[[index intValue]];
-            
-            [self dispatchAfter:0.05 operation:^{
-                square.selected = NO;
-            [self dispatchAfter:0.1 operation:^{
-                square.selected = YES;
-            [self dispatchAfter:0.1 operation:^{
-                square.selected = NO;
-            [self dispatchAfter:0.1 operation:^{
-                square.selected = YES;
-            [self dispatchAfter:0.1 operation:^{
-                square.selected = NO;
-            }]; }]; }]; }]; }];
-            
-        }
-    }
+    [self commitClearAnimation:linesShouldClear];
     
     // 消行
     CGFloat duration = SIMULATOR ? 0.8 : 0.55;
@@ -331,6 +315,34 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 
 #pragma mark - 效果
 
+// 消行动画
+- (void)commitClearAnimation:(NSArray *)squares {
+    
+    for (int i = 0; i < squares.count; i++) {
+        for (NSNumber *index in squares[i]) {
+            BasicSquare *square;
+            if ([index isKindOfClass:[NSNumber class]]) {
+                square = self.squareRoomView.subviews[[index intValue]];
+            }else {
+                square = (BasicSquare *)index;
+            }
+            
+            [self dispatchAfter:0.05 operation:^{
+                square.selected = NO;
+            [self dispatchAfter:0.1 operation:^{
+                square.selected = YES;
+            [self dispatchAfter:0.1 operation:^{
+                square.selected = NO;
+            [self dispatchAfter:0.1 operation:^{
+                square.selected = YES;
+            [self dispatchAfter:0.1 operation:^{
+                square.selected = NO;
+            }]; }]; }]; }]; }];
+            
+        }
+    }
+}
+
 // 刷新动画
 - (void)commitRefreshAnimation {
     
@@ -394,30 +406,35 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 #warning BUG
 - (void)bang {
     
-    NSMutableSet *set = [NSMutableSet set];
+    [self convertGroupSquareToBlack];
     
-    for (UIButton *cub in self.group.subviews) {
-        if (cub.selected == NO) continue;
+    NSMutableArray *arr = [NSMutableArray array];
+    
+    for (BasicSquare *cub in self.group.subviews) {
+        if (cub.selected == NO || cub.y != 2 * kSquareWH) continue;
     
         CGRect cubRect = [self.squareRoomView convertRect:cub.frame fromView:self.group];
         CGPoint newCenter = CGPointMake(cubRect.origin.x + cubRect.size.width * 0.5, cubRect.origin.y + cubRect.size.height * 0.5);
     
-        for (UIView *sub in self.squareRoomView.subviews) {
-            if (![sub isKindOfClass:[UIButton class]]) continue;
+        for (UIButton *sub in self.squareRoomView.subviews) {
+            if (![sub isKindOfClass:[BasicSquare class]]) continue;
+            if (sub.selected == NO) continue;
             
             if (fabs(newCenter.x - sub.center.x) <= kSquareWH && fabs(newCenter.y - sub.center.y) <= kSquareWH) {
-                [set addObject:sub];
+                if ([arr containsObject:sub]) continue;
+                [arr addObject:sub];
             }
         }
     }
     
-    for (UIButton *b in set) {
-        b.selected = NO;
-    }
+    [self commitClearAnimation:@[arr]];
     
-    [self destroyTimer:self.dropDownTimer];
-    [self.group backToStartPoint:_startPoint];
-    [self setupDropDownTimer];
+    CGFloat duration = SIMULATOR ? 0.8 : 0.55;
+    [self dispatchAfter:duration operation:^{
+        [self destroyTimer:self.dropDownTimer];
+        [self.group backToStartPoint:_startPoint];
+        [self setupDropDownTimer];
+    }];
     
 }
 
@@ -1008,12 +1025,12 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 - (NSArray *)tipTypes {
     if (!_tipTypes) {
         _tipTypes = @[
-                      @[@0, @1, @5, @6], // Z
-                      @[@1, @2, @4, @5], // -Z
-                      @[@2, @4, @5, @6], // L
-                      @[@0, @4, @5, @6], // -L
-                      @[@1, @4, @5, @6], // T
-                      @[@0, @1, @4, @5], // O
+//                      @[@0, @1, @5, @6], // Z
+//                      @[@1, @2, @4, @5], // -Z
+//                      @[@2, @4, @5, @6], // L
+//                      @[@0, @4, @5, @6], // -L
+//                      @[@1, @4, @5, @6], // T
+//                      @[@0, @1, @4, @5], // O
                       @[@4, @5, @6, @7], // I
                       @[@1, @2],         // i
                       @[@5],             // .
@@ -1026,26 +1043,26 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 - (NSArray *)types {
     if (!_types) {
         _types = @[
-                   // Z
-                   @[ @[@1, @4, @5, @8], @[@0, @1, @5, @6] ],
-
-                   // -Z
-                   @[ @[@1, @5, @6, @10], @[@1, @2, @4, @5] ],
-
-                   // L
-                   @[ @[@1, @2, @6, @10], @[@6, @8, @9, @10],
-                      @[@0, @4, @8, @9], @[@0, @1, @2, @4] ],
-
-                   // -L
-                   @[ @[@0, @1, @4, @8], @[@0, @1, @2, @6],
-                      @[@2, @6, @9, @10], @[@4, @8, @9, @10] ],
-
-                   // T
-                   @[ @[@1, @4, @5, @9], @[@1, @4, @5, @6],
-                      @[@1, @5, @6, @9], @[@4, @5, @6, @9] ],
-
-                   // O
-                   @[ @[@0, @1, @4, @5] ],
+//                   // Z
+//                   @[ @[@1, @4, @5, @8], @[@0, @1, @5, @6] ],
+//
+//                   // -Z
+//                   @[ @[@1, @5, @6, @10], @[@1, @2, @4, @5] ],
+//
+//                   // L
+//                   @[ @[@1, @2, @6, @10], @[@6, @8, @9, @10],
+//                      @[@0, @4, @8, @9], @[@0, @1, @2, @4] ],
+//
+//                   // -L
+//                   @[ @[@0, @1, @4, @8], @[@0, @1, @2, @6],
+//                      @[@2, @6, @9, @10], @[@4, @8, @9, @10] ],
+//
+//                   // T
+//                   @[ @[@1, @4, @5, @9], @[@1, @4, @5, @6],
+//                      @[@1, @5, @6, @9], @[@4, @5, @6, @9] ],
+//
+//                   // O
+//                   @[ @[@0, @1, @4, @5] ],
 
                    // I
                    @[ @[@4, @5, @6, @7], @[@1, @5, @9, @13] ],
@@ -1072,15 +1089,17 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 #pragma mark -
 
 
-@implementation BasicSquare
+@interface BasicSquare ()
 
-{
-    NSInteger _type;
-}
+@property (nonatomic, assign) NSInteger type;
+
+@end
+
+@implementation BasicSquare
 
 - (instancetype)initWithType:(NSInteger)type {
     if (self = [super init]) {
-        _type = type;
+        self.type = type;
         
         if (type == 11) {
             self.layer.borderWidth = 0.5;
@@ -1092,9 +1111,9 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 
 - (void)setSelected:(BOOL)selected {
     [super setSelected:selected];
-    if (_type == 11) {
+    if (self.type == 11) {
         self.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:selected ? 0.8 : 0.3];
-    }else if (_type == 22) {
+    }else if (self.type == 22) {
         self.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:selected ? 0.5 : 0];
     }
 }
