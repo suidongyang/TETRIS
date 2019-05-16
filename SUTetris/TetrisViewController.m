@@ -35,7 +35,7 @@
 typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 
 
-@interface TetrisViewController ()
+@interface TetrisViewController () <CAAnimationDelegate>
 {
     CGPoint _startPoint;        // 新组合origin
     CGFloat _edgeRotateOffset;  // 旋转溢出补偿
@@ -43,6 +43,7 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
     int _levelUpCounter;        // 计满20行升级
     BOOL _disableButtonActions; // 按钮禁用1
     BOOL _disablePauseButton;   // 刷新动画期间使暂停按钮无效
+    
 }
 
 @property (strong, nonatomic) UIView *squareRoomView;
@@ -403,40 +404,36 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
     
 }
 
-#warning BUG
-- (void)bang {
-    
-    [self convertGroupSquareToBlack];
-    
-    NSMutableArray *arr = [NSMutableArray array];
-    
-    for (BasicSquare *cub in self.group.subviews) {
-        if (cub.selected == NO || cub.y != 2 * kSquareWH) continue;
-    
-        CGRect cubRect = [self.squareRoomView convertRect:cub.frame fromView:self.group];
-        CGPoint newCenter = CGPointMake(cubRect.origin.x + cubRect.size.width * 0.5, cubRect.origin.y + cubRect.size.height * 0.5);
-    
-        for (UIButton *sub in self.squareRoomView.subviews) {
-            if (![sub isKindOfClass:[BasicSquare class]]) continue;
-            if (sub.selected == NO) continue;
-            
-            if (fabs(newCenter.x - sub.center.x) <= kSquareWH && fabs(newCenter.y - sub.center.y) <= kSquareWH) {
-                if ([arr containsObject:sub]) continue;
-                [arr addObject:sub];
-            }
-        }
-    }
-    
-    [self commitClearAnimation:@[arr]];
-    
-    CGFloat duration = SIMULATOR ? 0.8 : 0.55;
-    [self dispatchAfter:duration operation:^{
-        [self destroyTimer:self.dropDownTimer];
-        [self.group backToStartPoint:_startPoint];
-        [self setupDropDownTimer];
-    }];
-    
-}
+//#warning BUG
+//- (void)bang {
+//
+//    [self convertGroupSquareToBlack];
+//
+//    NSMutableArray *arr = [NSMutableArray array];
+//
+//    for (BasicSquare *cub in self.group.subviews) {
+//        if (cub.selected == NO || cub.y != 2 * kSquareWH) continue;
+//
+//        CGRect cubRect = [self.squareRoomView convertRect:cub.frame fromView:self.group];
+//        CGPoint newCenter = CGPointMake(cubRect.origin.x + cubRect.size.width * 0.5, cubRect.origin.y + cubRect.size.height * 0.5);
+//
+//        for (UIButton *sub in self.squareRoomView.subviews) {
+//            if (![sub isKindOfClass:[BasicSquare class]]) continue;
+//            if (sub.selected == NO) continue;
+//
+//            if (fabs(newCenter.x - sub.center.x) <= kSquareWH && fabs(newCenter.y - sub.center.y) <= kSquareWH) {
+//                if ([arr containsObject:sub]) continue;
+//                [arr addObject:sub];
+//            }
+//        }
+//    }
+//
+//    [self commitClearAnimation:@[arr]];
+//
+//    [self.group backToStartPoint:_startPoint];
+//    [self setupDropDownTimer];
+//
+//}
 
 - (void)calcScore {
     [self convertGroupSquareToBlack];
@@ -497,7 +494,7 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
     }else {
         
         if (self.group.isBob) {
-            [self bang]; // 炸弹效果
+//            [self bang]; // 炸弹效果
         }else {
             [self calcScore]; // 计分
         }
@@ -889,6 +886,43 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
     return self;
 }
 
+#pragma mark - 闪烁动画
+
+//- (void)setAnimating:(BOOL)flag {
+//
+//    if (!flag) {
+//        for (BasicSquare *square in self.subviews) {
+//            [square.layer removeAnimationForKey:@"blink"];
+//        }
+//        return;
+//    }
+//
+//    for (BasicSquare *square in self.subviews) {
+//        if (square.selected) {
+//
+//            CABasicAnimation *blink = [[CABasicAnimation alloc] init];
+//            blink.duration = 0.2;
+//            blink.autoreverses = YES;
+//            blink.repeatCount = MAXFLOAT;
+//            blink.keyPath = @"backgroundColor";
+//            blink.fromValue = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.5];
+//            blink.toValue = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.4];
+//            blink.beginTime = arc4random_uniform(10) / 50.0;
+//            blink.delegate = self;
+//
+//            [square.layer addAnimation:blink forKey:@"blink"];
+//            return;
+//        }
+//    }
+//
+//}
+//
+//
+//
+
+
+#pragma mark -
+
 - (UIView *)tipBoard {
     return self.tipView;
 }
@@ -900,7 +934,7 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 
 // 是否是炸弹
 - (BOOL)isBob {
-    return self.group.count == 5;
+    return [self.group isEqualToArray:@[@5, @6, @9, @10]];
 }
 
 // 更新下一个提示
@@ -952,6 +986,9 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
         BasicSquare *squareM = self.subviews[index];
         squareM.selected = YES;
     }
+    
+//    [self setAnimating:NO];
+//    [self setAnimating: self.isBob || self.isUniqueSquare];
     
 }
 
@@ -1025,16 +1062,16 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 - (NSArray *)tipTypes {
     if (!_tipTypes) {
         _tipTypes = @[
-//                      @[@0, @1, @5, @6], // Z
-//                      @[@1, @2, @4, @5], // -Z
-//                      @[@2, @4, @5, @6], // L
-//                      @[@0, @4, @5, @6], // -L
-//                      @[@1, @4, @5, @6], // T
-//                      @[@0, @1, @4, @5], // O
+                      @[@0, @1, @5, @6], // Z
+                      @[@1, @2, @4, @5], // -Z
+                      @[@2, @4, @5, @6], // L
+                      @[@0, @4, @5, @6], // -L
+                      @[@1, @4, @5, @6], // T
+                      @[@0, @1, @4, @5], // O
                       @[@4, @5, @6, @7], // I
-                      @[@1, @2],         // i
+//                      @[@1, @2],         // i
                       @[@5],             // .
-                      @[@1, @3, @4, @6], // bob
+//                      @[@1, @3, @4, @6], // bob
                     ];
     }
     return _tipTypes;
@@ -1043,38 +1080,38 @@ typedef enum { SUContinue = -1, SUNO, SUYES } SUBOOL;
 - (NSArray *)types {
     if (!_types) {
         _types = @[
-//                   // Z
-//                   @[ @[@1, @4, @5, @8], @[@0, @1, @5, @6] ],
-//
-//                   // -Z
-//                   @[ @[@1, @5, @6, @10], @[@1, @2, @4, @5] ],
-//
-//                   // L
-//                   @[ @[@1, @2, @6, @10], @[@6, @8, @9, @10],
-//                      @[@0, @4, @8, @9], @[@0, @1, @2, @4] ],
-//
-//                   // -L
-//                   @[ @[@0, @1, @4, @8], @[@0, @1, @2, @6],
-//                      @[@2, @6, @9, @10], @[@4, @8, @9, @10] ],
-//
-//                   // T
-//                   @[ @[@1, @4, @5, @9], @[@1, @4, @5, @6],
-//                      @[@1, @5, @6, @9], @[@4, @5, @6, @9] ],
-//
-//                   // O
-//                   @[ @[@0, @1, @4, @5] ],
+                   // Z
+                   @[ @[@1, @4, @5, @8], @[@0, @1, @5, @6] ],
+
+                   // -Z
+                   @[ @[@1, @5, @6, @10], @[@1, @2, @4, @5] ],
+
+                   // L
+                   @[ @[@1, @2, @6, @10], @[@6, @8, @9, @10],
+                      @[@0, @4, @8, @9], @[@0, @1, @2, @4] ],
+
+                   // -L
+                   @[ @[@0, @1, @4, @8], @[@0, @1, @2, @6],
+                      @[@2, @6, @9, @10], @[@4, @8, @9, @10] ],
+
+                   // T
+                   @[ @[@1, @4, @5, @9], @[@1, @4, @5, @6],
+                      @[@1, @5, @6, @9], @[@4, @5, @6, @9] ],
+
+                   // O
+                   @[ @[@0, @1, @4, @5] ],
 
                    // I
                    @[ @[@4, @5, @6, @7], @[@1, @5, @9, @13] ],
 
                    // i
-                   @[ @[@1, @2], @[@2, @6], @[@5, @6], @[@1, @5] ],
+//                   @[ @[@1, @2], @[@2, @6], @[@5, @6], @[@1, @5] ],
 
                    // .
                    @[ @[@5] ],
                    
                    // bob
-                   @[ @[@2, @5, @6, @9, @10] ],
+//                   @[ @[@5, @6, @9, @10] ],
                    
                 ];
     }
